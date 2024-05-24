@@ -27,11 +27,25 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<APIResponse>> GetProducts()
         {
-            IEnumerable<Product> productList = await _dbProduct.GetAllAsync();
-            _response.Result = _mapper.Map<List<ProductDTO>>(productList);
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.IsSuccess = true;
-            return Ok(_response);
+            try
+            {
+                IEnumerable<Product> productList = await _dbProduct.GetAllAsync();
+                _response.Result = _mapper.Map<List<ProductDTO>>(productList);
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                return Ok(_response);
+
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.ErrorMessages = new List<string>()
+                {
+                    ex.ToString()
+                };
+            }
+            return _response;
+
         }
         [HttpGet("id", Name = "GetProduct")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -39,19 +53,31 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<APIResponse>> GetProduct(int id)
         {
-            if (id == 0)
+            try
             {
-                return BadRequest();
-            }
-            var product = await _dbProduct.GetByIdAsync(u => u.Id == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
+                if (id == 0)
+                {
+                    return BadRequest();
+                }
+                var product = await _dbProduct.GetByIdAsync(u => u.Id == id);
+                if (product == null)
+                {
+                    return NotFound();
+                }
 
-            _response.Result = _mapper.Map<ProductDTO>(product);
-            _response.StatusCode = HttpStatusCode.OK;
-            return Ok(_response);
+                _response.Result = _mapper.Map<ProductDTO>(product);
+                _response.StatusCode = HttpStatusCode.OK;
+                return Ok(_response);
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.ErrorMessages = new List<string>()
+                {
+                    ex.ToString()
+                };
+            }
+            return _response;
         }
 
         [HttpPost]
@@ -59,23 +85,35 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<APIResponse>> CreateProduct([FromBody] ProductCreateDTO productCreateDTO)
         {
-            if (await _dbProduct.GetByIdAsync(u => u.Name.ToLower() == productCreateDTO.Name.ToLower()) != null)
+            try
             {
-                ModelState.AddModelError("", "Product Already Exist");
-                return BadRequest(ModelState);
+                if (await _dbProduct.GetByIdAsync(u => u.Name.ToLower() == productCreateDTO.Name.ToLower()) != null)
+                {
+                    ModelState.AddModelError("", "Product Already Exist");
+                    return BadRequest(ModelState);
+                }
+                if (productCreateDTO == null)
+                {
+                    return BadRequest();
+                }
+
+                Product product = _mapper.Map<Product>(productCreateDTO);
+
+                await _dbProduct.CreateAsync(product);
+                _response.Result = _mapper.Map<ProductDTO>(product);
+                _response.StatusCode = HttpStatusCode.Created;
+                _response.IsSuccess = true;
+                return CreatedAtRoute("GetProduct", new { id = product.Id }, _response);
             }
-            if (productCreateDTO == null)
+            catch (Exception ex)
             {
-                return BadRequest();
+                _response.IsSuccess = false;
+                _response.ErrorMessages = new List<string>()
+                {
+                    ex.ToString()
+                };
             }
-
-            Product product = _mapper.Map<Product>(productCreateDTO);
-
-            await _dbProduct.CreateAsync(product);
-            _response.Result = _mapper.Map<ProductDTO>(product);
-            _response.StatusCode = HttpStatusCode.Created;
-            _response.IsSuccess = true;
-            return CreatedAtRoute("GetProduct", new { id = product.Id }, _response);
+            return _response;
         }
 
         [HttpDelete("id", Name = "ProductDelete")]
@@ -84,22 +122,34 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<APIResponse>> DeleteProduct(int id)
         {
-            if (id == 0)
+            try
             {
-                return BadRequest();
+                if (id == 0)
+                {
+                    return BadRequest();
+                }
+
+                var product = await _dbProduct.GetByIdAsync(u => u.Id == id);
+
+                if (product == null)
+                {
+                    return NotFound();
+                }
+
+                await _dbProduct.RemoveAsync(product);
+                _response.StatusCode = HttpStatusCode.NoContent;
+                _response.IsSuccess = true;
+                return Ok(_response);
             }
-
-            var product = await _dbProduct.GetByIdAsync(u => u.Id == id);
-
-            if (product == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _response.IsSuccess = false;
+                _response.ErrorMessages = new List<string>()
+                {
+                    ex.ToString()
+                };
             }
-
-            await _dbProduct.RemoveAsync(product);
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
+            return _response;
         }
 
         [HttpPut("id", Name = "UpdateProduct")]
@@ -107,17 +157,29 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult<APIResponse>> UpdateProduct(int id, [FromBody] ProductUpdateDTO productUpdateDto)
         {
-            if (productUpdateDto == null || productUpdateDto.Id != id)
+            try
             {
-                return BadRequest();
+                if (productUpdateDto == null || productUpdateDto.Id != id)
+                {
+                    return BadRequest();
+                }
+                Product model = _mapper.Map<Product>(productUpdateDto);
+
+                await _dbProduct.UpdateAsync(model);
+
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                return Ok(_response);
             }
-            Product model = _mapper.Map<Product>(productUpdateDto);
-
-            await _dbProduct.UpdateAsync(model);
-
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.ErrorMessages = new List<string>()
+                {
+                    ex.ToString()
+                };
+            }
+            return _response;
         }
 
         [HttpPatch("{id:int}", Name = "UpdatePartialProduct")]
