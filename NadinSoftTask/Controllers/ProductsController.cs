@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NadinSoftTask.Domain.Entities;
+using NadinSoftTask.Domain.Entities.DTO;
 using NadinSoftTask.Infrastructure.Data;
 
 namespace NadinSoftTask.Controllers
@@ -14,18 +16,18 @@ namespace NadinSoftTask.Controllers
             _db = db;
         }
         [HttpGet]
-        public ActionResult<IEnumerable<Product>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProducts()
         {
-            return Ok(_db.Products);
+            return Ok(await _db.Products.ToListAsync());
         }
         [HttpGet("id" ,Name ="GetProduct")]
-        public ActionResult<Product> GetProduct(int id)
+        public async Task<ActionResult<ProductDTO>> GetProduct(int id)
         {
             if (id == 0)
             {
                 return BadRequest();
             }
-            var product = _db.Products.FirstOrDefault(u => u.Id == id);
+            var product = await _db.Products.FirstOrDefaultAsync(u => u.Id == id);
             if (product == null)
             {
                 return NotFound();
@@ -35,31 +37,39 @@ namespace NadinSoftTask.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Product> CreateProduct([FromBody] Product product)
+        public async Task<ActionResult<ProductDTO>> CreateProduct([FromBody] ProductCreateDTO productCreateDTO)
         {
-            if (product == null)
+            if (await _db.Products.FirstOrDefaultAsync(u => u.Name.ToLower() == productCreateDTO.Name.ToLower()) != null)
+            {
+                ModelState.AddModelError("", "Product Already Exist");
+                return BadRequest(ModelState);
+            }
+            if (productCreateDTO == null)
             {
                 return BadRequest();
             }
-            if (product.Id > 0)
+
+            Product model = new Product
             {
-                return StatusCode(StatusCodes.Status500InternalServerError);
-            }
-            _db.Products.Add(product);
-            _db.SaveChanges();
-            return Ok(product);
+                Name = productCreateDTO.Name,
+                ManufactureEmail = productCreateDTO.ManufactureEmail,
+                ManufacturePhone = productCreateDTO.ManufacturePhone
+            };
+            await _db.Products.AddAsync(model);
+            await _db.SaveChangesAsync();
+            return CreatedAtRoute("GetProduct", new { id = model.Id }, model);
 
         }
 
         [HttpDelete("id",Name ="ProductDelete")]
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
             if (id == 0)
             {
                 return BadRequest();
             }
 
-            var product = _db.Products.FirstOrDefault(u => u.Id == id);
+            var product = await _db.Products.FirstOrDefaultAsync(u => u.Id == id);
 
             if (product == null)
             {
@@ -67,21 +77,28 @@ namespace NadinSoftTask.Controllers
             }
 
             _db.Products.Remove(product);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
             return NoContent();
         }
 
         [HttpPut("id" , Name ="UpdateProduct")]
 
-        public IActionResult UpdateProduct(int id , [FromBody] Product product)
+        public async Task<IActionResult> UpdateProduct(int id , [FromBody] ProductUpdateDto ProductUpdateDto)
         {
-            if (product == null || product.Id != id)
+            if (ProductUpdateDto == null || ProductUpdateDto.Id != id)
             {
                 return BadRequest();
             }
+            Product model = new Product
+            {
+                Id = ProductUpdateDto.Id,
+                Name = ProductUpdateDto.Name,
+                ManufactureEmail = ProductUpdateDto.ManufactureEmail,
+                ManufacturePhone = ProductUpdateDto.ManufacturePhone
+            };
 
-            _db.Products.Remove(product);
-            _db.SaveChanges();
+            _db.Products.Update(model);
+            await _db.SaveChangesAsync();
             return NoContent();
         }
 
