@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NadinSoftTask.Domain.Entities;
 using NadinSoftTask.Domain.Entities.DTO;
@@ -11,14 +12,17 @@ namespace NadinSoftTask.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public ProductsController(ApplicationDbContext db)
+        private readonly IMapper _mapper;
+        public ProductsController(ApplicationDbContext db ,IMapper mapper )
         {
             _db = db;
+            _mapper = mapper;
         }
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProducts()
         {
-            return Ok(await _db.Products.ToListAsync());
+            IEnumerable<Product> productList = await _db.Products.ToListAsync();
+            return Ok(_mapper.Map<ProductDTO>(productList));
         }
         [HttpGet("id" ,Name ="GetProduct")]
         public async Task<ActionResult<ProductDTO>> GetProduct(int id)
@@ -33,7 +37,7 @@ namespace NadinSoftTask.Controllers
                 return NotFound();
             }
 
-            return Ok(product);
+            return Ok(_mapper.Map<ProductDTO>(product));
         }
 
         [HttpPost]
@@ -49,12 +53,8 @@ namespace NadinSoftTask.Controllers
                 return BadRequest();
             }
 
-            Product model = new Product
-            {
-                Name = productCreateDTO.Name,
-                ManufactureEmail = productCreateDTO.ManufactureEmail,
-                ManufacturePhone = productCreateDTO.ManufacturePhone
-            };
+            Product model = _mapper.Map<Product>(productCreateDTO);
+            
             await _db.Products.AddAsync(model);
             await _db.SaveChangesAsync();
             return CreatedAtRoute("GetProduct", new { id = model.Id }, model);
@@ -83,20 +83,13 @@ namespace NadinSoftTask.Controllers
 
         [HttpPut("id" , Name ="UpdateProduct")]
 
-        public async Task<IActionResult> UpdateProduct(int id , [FromBody] ProductUpdateDto ProductUpdateDto)
+        public async Task<IActionResult> UpdateProduct(int id , [FromBody] ProductUpdateDto productUpdateDto)
         {
-            if (ProductUpdateDto == null || ProductUpdateDto.Id != id)
+            if (productUpdateDto == null || productUpdateDto.Id != id)
             {
                 return BadRequest();
             }
-            Product model = new Product
-            {
-                Id = ProductUpdateDto.Id,
-                Name = ProductUpdateDto.Name,
-                ManufactureEmail = ProductUpdateDto.ManufactureEmail,
-                ManufacturePhone = ProductUpdateDto.ManufacturePhone
-            };
-
+            Product model = _mapper.Map<Product>(productUpdateDto);
             _db.Products.Update(model);
             await _db.SaveChangesAsync();
             return NoContent();
