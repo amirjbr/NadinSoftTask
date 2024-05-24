@@ -30,6 +30,7 @@ namespace NadinSoftTask.Controllers
             IEnumerable<Product> productList = await _dbProduct.GetAllAsync();
             _response.Result = _mapper.Map<List<ProductDTO>>(productList);
             _response.StatusCode = HttpStatusCode.OK;
+            _response.IsSuccess = true;
             return Ok(_response);
         }
         [HttpGet("id", Name = "GetProduct")]
@@ -73,6 +74,7 @@ namespace NadinSoftTask.Controllers
             await _dbProduct.CreateAsync(product);
             _response.Result = _mapper.Map<ProductDTO>(product);
             _response.StatusCode = HttpStatusCode.Created;
+            _response.IsSuccess = true;
             return CreatedAtRoute("GetProduct", new { id = product.Id }, _response);
         }
 
