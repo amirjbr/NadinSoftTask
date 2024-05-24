@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NadinSoftTask.Domain.Entities.DTO
 {
-    public class ProductUpdateDto
+    public class ProductUpdateDTO
     {
         [Required]
         public int Id { get; set; }

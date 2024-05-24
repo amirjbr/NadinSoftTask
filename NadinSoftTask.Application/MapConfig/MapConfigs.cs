@@ -15,7 +15,8 @@ namespace NadinSoftTask.Application.MapConfig
         {
             CreateMap<Product, ProductDTO>().ReverseMap();
             CreateMap<Product, ProductCreateDTO>().ReverseMap();
-            CreateMap<Product, ProductUpdateDto>().ReverseMap();
+            CreateMap<Product, ProductUpdateDTO>().ReverseMap();
+            CreateMap<ProductDTO, ProductUpdateDTO>().ReverseMap();
         }
     }
 }
