@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NadinSoftTask.Domain.Entities;
+using NadinSoftTask.Domain.Entities.DTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,7 @@ namespace NadinSoftTask.Infrastructure.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
         }
-
+        public DbSet<LocalUser> LocalUsers { get; set; }
         public DbSet<Product> Products { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
