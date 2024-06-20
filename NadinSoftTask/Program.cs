@@ -6,11 +6,15 @@ using NadinSoftTask.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var secretKey = builder.Configuration.GetValue<string>("ApiSettings:Secret");
+
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IProductRepository,ProductRepository>();
 builder.Services.AddAutoMapper(typeof(MapConfigs));
+
+var key = builder.Configuration.GetValue<string>("ApiSettings:Secret");
 
 builder.Services.AddControllers().AddNewtonsoftJson();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
