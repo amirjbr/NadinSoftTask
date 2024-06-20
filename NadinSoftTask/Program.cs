@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NadinSoftTask.Application.MapConfig;
+using NadinSoftTask.Domain.Entities;
 using NadinSoftTask.Domain.Repository;
 using NadinSoftTask.Infrastructure.Data;
 using NadinSoftTask.Infrastructure.Repositories;
@@ -15,6 +17,8 @@ var secretKey = builder.Configuration.GetValue<string>("ApiSettings:Secret");
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddScoped<IProductRepository,ProductRepository>();
 builder.Services.AddScoped<IUserRepository,UserRepository>();
 builder.Services.AddAutoMapper(typeof(MapConfigs));

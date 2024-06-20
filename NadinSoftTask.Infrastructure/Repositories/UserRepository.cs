@@ -1,6 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using NadinSoftTask.Domain.Entities;
 using NadinSoftTask.Domain.Entities.DTO;
 using NadinSoftTask.Domain.Repository;
 using NadinSoftTask.Infrastructure.Data;
@@ -17,16 +21,23 @@ namespace NadinSoftTask.Infrastructure.Repositories
     public class UserRepository : IUserRepository
     {
         private readonly ApplicationDbContext _db;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private string? _secretKey;
-        public UserRepository(ApplicationDbContext db,IConfiguration configuration)
+        private readonly IMapper _mapper;
+        public UserRepository(ApplicationDbContext db, IConfiguration configuration,
+            UserManager<ApplicationUser> userManager, IMapper mapper , RoleManager<IdentityRole> roleManager)
         {
             _db = db;
             _secretKey = configuration.GetValue<string>("ApiSettings:Secret");
+            _userManager = userManager;
+            _mapper = mapper;
+            _roleManager = roleManager;
         }
 
         public bool isUniqueUser(string username)
         {
-            var user = _db.LocalUsers.FirstOrDefault(u => u.Username == username);
+            var user = _db.ApplicationUsers.FirstOrDefault(u => u.UserName == username);
             if (user == null)
             {
                 return true;
@@ -37,9 +48,10 @@ namespace NadinSoftTask.Infrastructure.Repositories
 
         public async Task<LoginResponseDTO> Login(LoginRequestDTO loginRequestDTO)
         {
-            var user = _db.LocalUsers.FirstOrDefault(u => u.Username.ToLower() == loginRequestDTO.Username.ToLower()
-                && u.Password == loginRequestDTO.Password);
-            if (user == null)
+            var user = _db.ApplicationUsers.FirstOrDefault(u => u.UserName.ToLower() == loginRequestDTO.UserName.ToLower());
+
+            bool isValidPassword = await _userManager.CheckPasswordAsync(user, loginRequestDTO.Password);
+            if (user == null || isValidPassword == false)
             {
                 return new LoginResponseDTO()
                 {
@@ -49,6 +61,8 @@ namespace NadinSoftTask.Infrastructure.Repositories
             }
 
             //if user found generate JWT Token
+            var roles = await _userManager.GetRolesAsync(user);
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_secretKey);
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -56,7 +70,7 @@ namespace NadinSoftTask.Infrastructure.Repositories
                 Subject = new ClaimsIdentity(new Claim[]
                 {
                     new Claim(ClaimTypes.Name, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role)
+                    new Claim(ClaimTypes.Role, roles.FirstOrDefault())
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
@@ -66,25 +80,45 @@ namespace NadinSoftTask.Infrastructure.Repositories
             LoginResponseDTO loginResponseDTO = new LoginResponseDTO()
             {
                 Token = tokenHandler.WriteToken(token),
-                User = user
+                User = _mapper.Map<UserDTO>(user),
+                Role = roles.FirstOrDefault()
             };
             return loginResponseDTO;
         }
-        
 
-        public async Task<LocalUser> Register(RegisterationRequestDTO registerationRequestDTO)
+
+        public async Task<UserDTO> Register(RegisterationRequestDTO registerationRequestDTO)
         {
-            LocalUser user = new LocalUser()
+            ApplicationUser user = new ApplicationUser()
             {
                 Name = registerationRequestDTO.Name,
-                Username = registerationRequestDTO.Username,
-                Password = registerationRequestDTO.Password,
-                Role = registerationRequestDTO.Role,
+                UserName = registerationRequestDTO.Username,
+                Email = registerationRequestDTO.Username,
+                NormalizedEmail = registerationRequestDTO.Username.ToUpper()
             };
-            await _db.LocalUsers.AddAsync(user);
-            await _db.SaveChangesAsync();
-            user.Password = "";
-            return user;
+
+            try
+            {
+                var result = await _userManager.CreateAsync(user, registerationRequestDTO.Password);
+                if (result.Succeeded)
+                {
+                    if (!_roleManager.RoleExistsAsync("admin").GetAwaiter().GetResult())
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole("admin"));
+                        await _roleManager.CreateAsync(new IdentityRole("customer"));
+                    }
+                    await _userManager.AddToRoleAsync(user, "admin");
+                    var userToReturn = _db.ApplicationUsers
+                        .FirstOrDefault(u => u.UserName == registerationRequestDTO.Username);
+                    return _mapper.Map<UserDTO>(userToReturn);
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+
+            return new UserDTO();
 
         }
     }

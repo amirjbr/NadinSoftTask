@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace NadinSoftTask.Domain.Entities.DTO
 {
-    public class LoginResponseDTO
+    public class UserDTO
     {
-        public UserDTO User { get; set; }
-        public string Role { get; set; }
-
-        public string Token { get; set; }
-
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string UserName { get; set; }
     }
 }
