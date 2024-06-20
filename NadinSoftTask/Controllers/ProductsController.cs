@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -83,6 +84,7 @@ namespace NadinSoftTask.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [Authorize(Roles = "admin")]
         public async Task<ActionResult<APIResponse>> CreateProduct([FromBody] ProductCreateDTO productCreateDTO)
         {
             try
@@ -120,6 +122,7 @@ namespace NadinSoftTask.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [Authorize(Roles = "admin")]
         public async Task<ActionResult<APIResponse>> DeleteProduct(int id)
         {
             try
@@ -155,6 +158,7 @@ namespace NadinSoftTask.Controllers
         [HttpPut("id", Name = "UpdateProduct")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [Authorize]
         public async Task<ActionResult<APIResponse>> UpdateProduct(int id, [FromBody] ProductUpdateDTO productUpdateDto)
         {
             try
@@ -185,6 +189,7 @@ namespace NadinSoftTask.Controllers
         [HttpPatch("{id:int}", Name = "UpdatePartialProduct")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize]
         public async Task<IActionResult> UpdatePartialProduct(int id, JsonPatchDocument<ProductUpdateDTO> patchDTO)
         {
             if (patchDTO == null || id == 0)
